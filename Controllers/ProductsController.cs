@@ -7,9 +7,12 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using AuditTrail.EFCore.Demo.Data;
 using AuditTrail.EFCore.Demo.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace AuditTrail.EFCore.Demo.Controllers
 {
+    [Authorize]
     public class ProductsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -59,7 +62,7 @@ namespace AuditTrail.EFCore.Demo.Controllers
             if (ModelState.IsValid)
             {
                 _context.Add(product);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(User?.FindFirst(ClaimTypes.NameIdentifier).Value);
                 return RedirectToAction(nameof(Index));
             }
             return View(product);
@@ -97,8 +100,11 @@ namespace AuditTrail.EFCore.Demo.Controllers
             {
                 try
                 {
-                    _context.Update(product);
-                    await _context.SaveChangesAsync();
+                    //_context.Update(product);
+                    //await _context.SaveChangesAsync();
+                    var oldProduct = await _context.Product.FindAsync(id);
+                    _context.Entry(oldProduct).CurrentValues.SetValues(product);
+                    await _context.SaveChangesAsync(User?.FindFirst(ClaimTypes.NameIdentifier).Value);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -141,7 +147,7 @@ namespace AuditTrail.EFCore.Demo.Controllers
         {
             var product = await _context.Product.FindAsync(id);
             _context.Product.Remove(product);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(User?.FindFirst(ClaimTypes.NameIdentifier).Value);
             return RedirectToAction(nameof(Index));
         }
 
